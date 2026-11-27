@@ -73,14 +73,14 @@
 <div class="overlay" id="menuOverlay">
   <div class="card">
     <h1>Aetheris: Prism Weaver</h1>
-    <p>Drag your finger or mouse to weave glowing ribbons, circle orbs to capture them, and tap to pulse shockwaves.</p>
+    <p>Drag your finger or mouse to weave glowing ribbons, circle the coins to capture them, and tap to pulse shockwaves.</p>
     <button class="mode-btn" onclick="startGame('arcade')">
       <strong>Lumen Loop (Arcade)</strong>
-      <span>Circle orbs to capture them and extend the 45s timer.</span>
+      <span>Circle VSA Tycoon Coins to capture them and extend the 45s timer.</span>
     </button>
     <button class="mode-btn" onclick="startGame('conduit')">
       <strong>Starlight Conduit (Survival)</strong>
-      <span>Collect orbs and shatter red Void Spikes with tap shockwaves.</span>
+      <span>Collect coins and shatter red Void Spikes with tap shockwaves.</span>
     </button>
     <button class="mode-btn" onclick="startGame('zen')">
       <strong>Zen Canvas (Relax)</strong>
@@ -105,8 +105,12 @@
 <script>
 const art = document.getElementById('art'), fx = document.getElementById('fx');
 const aCtx = art.getContext('2d'), fCtx = fx.getContext('2d');
-const COLORS = ['#38bdf8', '#818cf8', '#c084fc', '#f472b6', '#2dd4bf'];
+const COLORS = ['#eab308', '#ca8a04', '#f59e0b', '#d97706', '#facc15']; // Golden tones
 const NOTES = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3, 659.3, 784.0];
+
+// Load Custom Coin Image
+const coinImg = new Image();
+coinImg.src = 'coin.png'; // Make sure the uploaded file is coin.png
 
 let W = 0, H = 0, mode = 'arcade', state = 'menu';
 let score = 0, combo = 1, timer = 45, shields = 3, audioCtx = null;
@@ -140,7 +144,7 @@ function spawnOrb() {
   orbs.push({
     x: 40 + Math.random() * (W - 80), y: 70 + Math.random() * (H - 110),
     vx: (Math.random() - 0.5) * 50, vy: (Math.random() - 0.5) * 50,
-    r: 15, col: randCol()
+    r: 18, col: randCol()
   });
 }
 
@@ -235,7 +239,6 @@ function moveInput(x, y) {
     aCtx.beginPath(); aCtx.moveTo(ptr.px, ptr.py); aCtx.lineTo(x, y); aCtx.stroke();
     aCtx.restore();
 
-    // Check closed loop around orbs
     if (trail.length > 14) {
       for (let i = 0; i < trail.length - 12; i++) {
         if (Math.hypot(x - trail[i].x, y - trail[i].y) < 36) {
@@ -258,11 +261,9 @@ function moveInput(x, y) {
   ptr.px = x; ptr.py = y; ptr.x = x; ptr.y = y;
 }
 
-// Mouse controls
 art.addEventListener('mousemove', e => moveInput(e.clientX, e.clientY));
 art.addEventListener('mousedown', e => { ptr.down = false; moveInput(e.clientX, e.clientY); pulseWave(e.clientX, e.clientY); });
 
-// Touch controls
 art.addEventListener('touchstart', e => {
   e.preventDefault();
   const t = e.touches[0];
@@ -306,8 +307,20 @@ function loop(now) {
         o.x = 40 + Math.random() * (W - 80); o.y = 70 + Math.random() * (H - 110); o.col = randCol();
         updateHUD();
       }
-      fCtx.fillStyle = o.col; fCtx.beginPath(); fCtx.arc(o.x, o.y, o.r, 0, Math.PI * 2); fCtx.fill();
-      fCtx.fillStyle = '#fff'; fCtx.beginPath(); fCtx.arc(o.x, o.y, 5, 0, Math.PI * 2); fCtx.fill();
+      
+      // Draw Custom coin Image!
+      if (coinImg.complete) {
+        fCtx.save();
+        // Add subtle shadow behind the coin
+        fCtx.shadowBlur = 10;
+        fCtx.shadowColor = o.col;
+        fCtx.drawImage(coinImg, o.x - o.r, o.y - o.r, o.r*2, o.r*2);
+        fCtx.restore();
+      } else {
+        // Fallback to gold dots if coin hasn't loaded yet
+        fCtx.fillStyle = '#fbbf24'; fCtx.beginPath(); fCtx.arc(o.x, o.y, o.r, 0, Math.PI * 2); fCtx.fill();
+        fCtx.fillStyle = '#fff'; fCtx.beginPath(); fCtx.arc(o.x, o.y, 5, 0, Math.PI * 2); fCtx.fill();
+      }
     });
 
     for (let i = spikes.length - 1; i >= 0; i--) {
