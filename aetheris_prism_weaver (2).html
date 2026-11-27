@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aetheris: Prism Weaver — Interactive Art Arcade</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Space Grotesk -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #05050a;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            cursor: none;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(34, 211, 238, 0.25); }
+            50% { box-shadow: 0 0 35px rgba(217, 70, 239, 0.45); }
+        }
+
+        .glow-card {
+            animation: pulseGlow 4s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-slate-100 antialiased selection:bg-cyan-500 selection:text-white">
+
+    <!-- Main Interactive Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Top Live HUD Bar -->
+    <header id="hudBar" class="fixed top-0 left-0 right-0 z-20 p-3 sm:p-4 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+        <!-- Left: Brand & Mode Switcher -->
+        <div class="flex items-center gap-2 pointer-events-auto">
+            <div class="bg-slate-950/75 backdrop-blur-md border border-white/10 px-3.5 py-2 rounded-2xl shadow-xl flex items-center gap-2">
+                <div class="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-cyan-400 to-fuchsia-500 animate-pulse"></div>
+                <span class="font-display font-bold tracking-wider text-xs sm:text-sm text-white">AETHERIS</span>
+            </div>
+
+            <!-- Mode Selector Pills -->
+            <div class="hidden md:flex items-center bg-slate-950/75 backdrop-blur-md border border-white/10 p-1 rounded-2xl shadow-xl">
+                <button data-mode="loop" class="hud-mode-btn px-3 py-1 rounded-xl text-xs font-medium transition-all bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                    Lumen Loop
+                </button>
+                <button data-mode="conduit" class="hud-mode-btn px-3 py-1 rounded-xl text-xs font-medium transition-all text-slate-400 hover:text-white border border-transparent">
+                    Starlight Conduit
+                </button>
+                <button data-mode="zen" class="hud-mode-btn px-3 py-1 rounded-xl text-xs font-medium transition-all text-slate-400 hover:text-white border border-transparent">
+                    Zen Canvas
+                </button>
+            </div>
+        </div>
+
+        <!-- Center: Score, Combo & Integrity/Timer -->
+        <div id="statsPill" class="bg-slate-950/80 backdrop-blur-md border border-white/10 px-4 py-1.5 rounded-2xl shadow-xl flex items-center gap-4 sm:gap-6">
+            <div class="flex flex-col items-center">
+                <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Score</span>
+                <span id="scoreDisplay" class="font-display font-bold text-sm sm:text-base text-white tabular-nums">0</span>
+            </div>
+            <div class="h-6 w-px bg-white/10"></div>
+            <div class="flex flex-col items-center">
+                <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Combo</span>
+                <span id="comboDisplay" class="font-display font-bold text-sm sm:text-base text-cyan-400 tabular-nums">x1</span>
+            </div>
+            <div class="h-6 w-px bg-white/10"></div>
+            <div id="meterContainer" class="flex flex-col items-center min-w-[76px]">
+                <div class="flex items-center justify-between w-full text-[10px] uppercase tracking-wider font-semibold mb-1">
+                    <span id="meterLabel" class="text-slate-400">Time</span>
+                    <span id="meterValue" class="text-emerald-400 font-mono">60s</span>
+                </div>
+                <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div id="meterBar" class="h-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 transition-all duration-150" style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Palette Quick-Cycle, Sound & Pause -->
+        <div class="flex items-center gap-2 pointer-events-auto">
+            <button id="paletteCycleBtn" title="Switch Color Palette"
+                class="bg-slate-950/75 hover:bg-slate-900 backdrop-blur-md border border-white/10 px-3 py-2 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-medium transition-all active:scale-95">
+                <span id="paletteSwatch" class="w-3.5 h-3.5 rounded-full bg-gradient-to-tr from-cyan-400 to-fuchsia-500"></span>
+                <span id="paletteNameLabel" class="hidden sm:inline text-slate-200">Nebula Neon</span>
+            </button>
+
+            <button id="muteBtn" title="Toggle Soundscape"
+                class="bg-slate-950/75 hover:bg-slate-900 backdrop-blur-md border border-white/10 p-2.5 rounded-2xl shadow-xl text-cyan-400 transition-all active:scale-95">
+                <i id="muteIcon" data-lucide="volume-2" class="w-4 h-4"></i>
+            </button>
+
+            <button id="pauseBtn" title="Pause / Studio Menu"
+                class="bg-slate-950/75 hover:bg-slate-900 backdrop-blur-md border border-white/10 p-2.5 rounded-2xl shadow-xl text-slate-200 transition-all active:scale-95">
+                <i data-lucide="pause" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Start / Mode Selection Overlay -->
+    <div id="startOverlay" class="fixed inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md transition-opacity duration-300">
+        <div class="glow-card max-w-xl w-full bg-slate-900/90 border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl text-center">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-medium mb-4">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                <span>Interactive Art-as-Gameplay Arcade</span>
+            </div>
+
+            <h1 class="font-display text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">
+                AETHERIS: <span class="bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-300 bg-clip-text text-transparent">PRISM WEAVER</span>
+            </h1>
+            <p class="text-slate-300 text-xs sm:text-sm max-w-md mx-auto mb-6 leading-relaxed">
+                Every stroke paints a permanent generative masterpiece. Drag to weave neon ribbons, encircle prisms, and click to unleash harmonic shockwaves.
+            </p>
+
+            <!-- Mode Selection Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 text-left">
+                <button data-select-mode="loop"
+                    class="start-mode-card p-3.5 rounded-2xl border-2 border-cyan-400 bg-cyan-500/15 transition-all hover:scale-[1.02]">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <i data-lucide="lasso" class="w-5 h-5 text-cyan-400"></i>
+                        <span class="text-[10px] font-semibold uppercase tracking-wider text-cyan-300">Arcade</span>
+                    </div>
+                    <div class="font-display font-semibold text-sm text-white mb-1">Lumen Loop</div>
+                    <p class="text-[11px] text-slate-300 leading-snug">Draw closed loops around glowing orbs to capture them in bursts of paint.</p>
+                </button>
+
+                <button data-select-mode="conduit"
+                    class="start-mode-card p-3.5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all hover:scale-[1.02]">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <i data-lucide="orbit" class="w-5 h-5 text-fuchsia-400"></i>
+                        <span class="text-[10px] font-semibold uppercase tracking-wider text-fuchsia-300">Flow</span>
+                    </div>
+                    <div class="font-display font-semibold text-sm text-white mb-1">Starlight Conduit</div>
+                    <p class="text-[11px] text-slate-300 leading-snug">Thread your ribbon through moving resonance rings & shatter Void Spikes.</p>
+                </button>
+
+                <button data-select-mode="zen"
+                    class="start-mode-card p-3.5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all hover:scale-[1.02]">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <i data-lucide="palette" class="w-5 h-5 text-amber-400"></i>
+                        <span class="text-[10px] font-semibold uppercase tracking-wider text-amber-300">Relax</span>
+                    </div>
+                    <div class="font-display font-semibold text-sm text-white mb-1">Zen Canvas</div>
+                    <p class="text-[11px] text-slate-300 leading-snug">No timers or hazards—pure generative painting with musical pentatonic chimes.</p>
+                </button>
+            </div>
+
+            <!-- Palette Selector Row -->
+            <div class="flex flex-wrap items-center justify-center gap-2 mb-6" id="startPaletteRow"></div>
+
+            <!-- Controls Legend -->
+            <div class="grid grid-cols-3 gap-2 bg-slate-950/60 border border-white/5 rounded-2xl p-3 mb-6 text-[11px] text-slate-300">
+                <div class="flex flex-col items-center gap-1">
+                    <span class="text-cyan-400 font-semibold">Move / Drag</span>
+                    <span>Weave Neon Ribbon</span>
+                </div>
+                <div class="flex flex-col items-center gap-1 border-x border-white/10">
+                    <span class="text-fuchsia-400 font-semibold">Encircle Orbs</span>
+                    <span>Capture & Splatter</span>
+                </div>
+                <div class="flex flex-col items-center gap-1">
+                    <span class="text-amber-400 font-semibold">Click / Tap</span>
+                    <span>Harmonic Shockwave</span>
+                </div>
+            </div>
+
+            <button id="startGameBtn"
+                class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 text-white font-display font-bold text-sm sm:text-base tracking-wide shadow-lg shadow-indigo-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
+                <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                <span>Begin Weaving</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Pause / Game Over Modal Overlay -->
+    <div id="endModal" class="hidden fixed inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+        <div class="max-w-md w-full bg-slate-900/95 border border-white/15 rounded-3xl p-6 sm:p-7 shadow-2xl text-center">
+            <div id="endBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-fuchsia-500/15 border border-fuchsia-500/30 text-fuchsia-300 text-xs font-semibold mb-3">
+                <i data-lucide="award" class="w-3.5 h-3.5"></i>
+                <span id="endBadgeText">Canvas Complete</span>
+            </div>
+
+            <h2 id="endTitle" class="font-display text-2xl sm:text-3xl font-bold text-white mb-1">Masterpiece Woven</h2>
+            <p id="endSubtitle" class="text-slate-400 text-xs mb-5">Your strokes painted a unique luminous composition.</p>
+
+            <!-- Summary Metrics -->
+            <div class="grid grid-cols-3 gap-2.5 bg-slate-950/70 border border-white/10 rounded-2xl p-3.5 mb-5">
+                <div>
+                    <div class="text-[10px] uppercase tracking-wider text-slate-400">Final Score</div>
+                    <div id="finalScore" class="font-display font-bold text-lg text-white">0</div>
+                </div>
+                <div class="border-x border-white/10">
+                    <div class="text-[10px] uppercase tracking-wider text-slate-400">Max Combo</div>
+                    <div id="finalCombo" class="font-display font-bold text-lg text-cyan-400">x1</div>
+                </div>
+                <div>
+                    <div class="text-[10px] uppercase tracking-wider text-slate-400">Captures</div>
+                    <div id="finalCaptures" class="font-display font-bold text-lg text-fuchsia-400">0</div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="space-y-2.5">
+                <button id="saveArtBtn"
+                    class="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-display font-bold text-xs sm:text-sm shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all active:scale-95">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span>Save Artwork (PNG)</span>
+                </button>
+
+                <div class="grid grid-cols-2 gap-2.5">
+                    <button id="resumeBtn"
+                        class="hidden py-2.5 px-4 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
+                        <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                        <span>Resume</span>
+                    </button>
+                    <button id="restartBtn"
+                        class="col-span-2 py-2.5 px-4 rounded-2xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                        <span>New Canvas Run</span>
+                    </button>
+                </div>
+
+                <button id="backToMenuBtn"
+                    class="w-full py-2 text-xs text-slate-400 hover:text-white transition-colors">
+                    Switch Game Mode
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Toast Feedback -->
+    <div id="toast"
+        class="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 pointer-events-none opacity-0 translate-y-2 transition-all duration-300 bg-slate-900/90 backdrop-blur-md border border-white/15 text-white px-4 py-2 rounded-full text-xs font-medium shadow-2xl flex items-center gap-2">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-cyan-400"></i>
+        <span id="toastText">Saved!</span>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        /**
+         * ============================================================================
+         * 1. PROCEDURAL WEB AUDIO SOUNDSCAPE ENGINE
+         * Synthesizes pentatonic chimes, harmonic loop chords, shockwaves, and alerts
+         * ============================================================================
+         */
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+                // C Major / A Minor Pentatonic frequencies across 3 octaves
+                this.scale = [
+                    261.63, 293.66, 329.63, 392.00, 440.00,
+                    523.25, 587.33, 659.25, 783.99, 880.00,
+                    1046.50, 1174.66, 1318.51
+                ];
+                this.lastNoteTime = 0;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                return this.muted;
+            }
+
+            playNote(indexOffset = 0, duration = 0.45, volume = 0.12, type = 'sine') {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const freq = this.scale[Math.abs(indexOffset) % this.scale.length];
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, now);
+
+                gain.gain.setValueAtTime(0.001, now);
+                gain.gain.exponentialRampToValueAtTime(volume, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + duration + 0.02);
+            }
+
+            playTrailSpark(velocity) {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                if (now - this.lastNoteTime < 0.09) return;
+                this.lastNoteTime = now;
+
+                const idx = Math.min(this.scale.length - 1, Math.floor(velocity * 0.35));
+                this.playNote(idx, 0.28, 0.04, 'sine');
+            }
+
+            playLoopCapture(count = 1, combo = 1) {
+                if (this.muted) return;
+                this.init();
+                const baseIdx = (combo % 6);
+                const chordIntervals = [0, 2, 4, 7];
+                const notesToPlay = Math.min(4, count + 1);
+
+                for (let i = 0; i < notesToPlay; i++) {
+                    setTimeout(() => {
+                        this.playNote(baseIdx + chordIntervals[i], 0.85, 0.11, 'triangle');
+                    }, i * 55);
+                }
+            }
+
+            playShockwave() {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.exponentialRampToValueAtTime(55, now + 0.45);
+
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.48);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            }
+
+            playHazardHit() {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(110, now);
+                osc.frequency.linearRampToValueAtTime(65, now + 0.3);
+
+                gain.gain.setValueAtTime(0.14, now);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            }
+        }
+
+        const audio = new SoundEngine();
+
+        /**
+         * ============================================================================
+         * 2. COLOR PALETTES & CANVAS ARCHITECTURE
+         * Dual-layer architecture:
+         * - `artLayer` (offscreen canvas): accumulates permanent paint splatters,
+         *   ribbon echoes, and harmonic blooms so the player's run creates a real painting.
+         * - `canvas` (main viewport): composites `artLayer` + live glowing entities.
+         * ============================================================================
+         */
+        const PALETTES = [
+            { id: 'nebula', name: 'Nebula Neon', colors: ['#00f5d4', '#00bbf9', '#9b5de5', '#f15bb5', '#fee440'] },
+            { id: 'biolume', name: 'Biolume Ocean', colors: ['#0aff99', '#00e5ff', '#3a86ff', '#8338ec', '#4cc9f0'] },
+            { id: 'solar', name: 'Solar Flare', colors: ['#ff5400', '#ff9e00', '#ffdd00', '#ff0054', '#ffbd00'] },
+            { id: 'sakura', name: 'Sakura Ink', colors: ['#ff758f', '#ff8fa3', '#ffb3c1', '#c9184a', '#ffe5ec'] }
+        ];
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Persistent offscreen artwork canvas
+        const artLayer = document.createElement('canvas');
+        const artCtx = artLayer.getContext('2d');
+
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        function resizeCanvases(preserveArt = true) {
+            let snapshot = null;
+            if (preserveArt && artLayer.width > 0 && artLayer.height > 0) {
+                snapshot = document.createElement('canvas');
+                snapshot.width = artLayer.width;
+                snapshot.height = artLayer.height;
+                snapshot.getContext('2d').drawImage(artLayer, 0, 0);
+            }
+
+            width = window.innerWidth;
+            height = window.innerHeight;
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            artLayer.width = width * dpr;
+            artLayer.height = height * dpr;
+            artCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            // Base obsidian canvas background
+            artCtx.fillStyle = '#05050a';
+            artCtx.fillRect(0, 0, width, height);
+
+            if (snapshot) {
+                artCtx.drawImage(snapshot, 0, 0, width, height);
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 3. GAME STATE & ENTITIES
+         * ============================================================================
+         */
+        const game = {
+            mode: 'loop', // 'loop' | 'conduit' | 'zen'
+            paletteIndex: 0,
+            status: 'menu', // 'menu' | 'playing' | 'paused' | 'gameover'
+            score: 0,
+            combo: 1,
+            maxCombo: 1,
+            captures: 0,
+            timeLeft: 60,
+            maxTime: 60,
+            integrity: 100,
+            lastTimestamp: 0,
+            spawnTimer: 0,
+            hazardTimer: 0,
+            hueTick: 0,
+            shakeTime: 0
+        };
+
+        const pointer = {
+            x: width / 2,
+            y: height / 2,
+            prevX: width / 2,
+            prevY: height / 2,
+            vx: 0,
+            vy: 0,
+            isDown: false,
+            active: false,
+            trail: [] // Array of {x, y, time, color}
+        };
+
+        // Game Entities
+        let lumenOrbs = [];
+        let resonanceRings = [];
+        let voidSpikes = [];
+        let particles = [];
+        let shockwaves = [];
+        let floatingTexts = [];
+        let ribbonStrands = [];
+
+        function getPalette() {
+            return PALETTES[game.paletteIndex];
+        }
+
+        function getColor(index = 0, alpha = 1) {
+            const colors = getPalette().colors;
+            const hex = colors[Math.abs(Math.floor(index)) % colors.length];
+            if (alpha >= 1) return hex;
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        function initRibbonStrands() {
+            ribbonStrands = [];
+            for (let i = 0; i < 5; i++) {
+                ribbonStrands.push({
+                    x: pointer.x,
+                    y: pointer.y,
+                    vx: 0,
+                    vy: 0,
+                    spring: 0.08 + i * 0.025,
+                    friction: 0.78 + i * 0.02,
+                    phase: (i / 5) * Math.PI * 2,
+                    colorIdx: i
+                });
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 4. PERMANENT PAINT SPLATTERS & ART GENERATION
+         * ============================================================================
+         */
+        function paintPermanentSplatter(x, y, colorIdx, scale = 1) {
+            artCtx.save();
+            artCtx.globalCompositeOperation = 'lighter';
+
+            // Central soft watercolor/nebula bloom
+            const radius = (22 + Math.random() * 28) * scale;
+            const grad = artCtx.createRadialGradient(x, y, 0, x, y, radius);
+            grad.addColorStop(0, getColor(colorIdx, 0.22));
+            grad.addColorStop(0.5, getColor(colorIdx + 1, 0.09));
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+            artCtx.fillStyle = grad;
+            artCtx.beginPath();
+            artCtx.arc(x, y, radius, 0, Math.PI * 2);
+            artCtx.fill();
+
+            // Fine ink droplets around burst
+            const droplets = Math.floor(8 * scale);
+            for (let i = 0; i < droplets; i++) {
+                const ang = Math.random() * Math.PI * 2;
+                const dist = (10 + Math.random() * 45) * scale;
+                const dx = x + Math.cos(ang) * dist;
+                const dy = y + Math.sin(ang) * dist;
+                const r = (1.5 + Math.random() * 4) * scale;
+
+                artCtx.fillStyle = getColor(colorIdx + i, 0.35);
+                artCtx.beginPath();
+                artCtx.arc(dx, dy, r, 0, Math.PI * 2);
+                artCtx.fill();
+            }
+
+            artCtx.restore();
+        }
+
+        function paintPermanentRibbonStroke(x1, y1, x2, y2, colorIdx, widthScale = 1) {
+            artCtx.save();
+            artCtx.globalCompositeOperation = 'lighter';
+            artCtx.strokeStyle = getColor(colorIdx, 0.09);
+            artCtx.lineWidth = 2.2 * widthScale;
+            artCtx.lineCap = 'round';
+            artCtx.beginPath();
+            artCtx.moveTo(x1, y1);
+            artCtx.lineTo(x2, y2);
+            artCtx.stroke();
+            artCtx.restore();
+        }
+
+        /**
+         * ============================================================================
+         * 5. GEOMETRIC LOOP DETECTION (POINT-IN-POLYGON & INTERSECTION)
+         * Detects when the player's ribbon trail crosses itself to form a closed loop,
+         * then checks which Lumen Orbs lie inside the captured polygon!
+         * ============================================================================
+         */
+        function segmentsIntersect(a, b, c, d) {
+            const ccw = (p1, p2, p3) => (p3.y - p1.y) * (p2.x - p1.x) > (p2.y - p1.y) * (p3.x - p1.x);
+            return (ccw(a, c, d) !== ccw(b, c, d)) && (ccw(a, b, c) !== ccw(a, b, d));
+        }
+
+        function pointInPolygon(px, py, polygon) {
+            let inside = false;
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                const xi = polygon[i].x, yi = polygon[i].y;
+                const xj = polygon[j].x, yj = polygon[j].y;
+                const intersect = ((yi > py) !== (yj > py)) &&
+                    (px < (xj - xi) * (py - yi) / ((yj - yi) || 0.00001) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+        function checkTrailForLoop() {
+            const pts = pointer.trail;
+            if (pts.length < 10) return;
+
+            const n = pts.length;
+            const segA1 = pts[n - 2];
+            const segA2 = pts[n - 1];
+
+            // Look backwards for self-intersection (skip recent 6 segments to avoid noise)
+            for (let i = n - 8; i >= 1; i--) {
+                const segB1 = pts[i - 1];
+                const segB2 = pts[i];
+
+                if (segmentsIntersect(segA1, segA2, segB1, segB2)) {
+                    const loopPolygon = pts.slice(i, n);
+                    handleClosedLoop(loopPolygon);
+                    // Trim trail to intersection point so the same loop doesn't double-trigger
+                    pointer.trail = pts.slice(n - 2);
+                    break;
+                }
+            }
+        }
+
+        function handleClosedLoop(polygon) {
+            // Compute centroid & approximate radius of loop
+            let cx = 0, cy = 0;
+            polygon.forEach(p => { cx += p.x; cy += p.y; });
+            cx /= polygon.length;
+            cy /= polygon.length;
+
+            // Find all Lumen Orbs inside this closed loop
+            const capturedIndices = [];
+            lumenOrbs.forEach((orb, idx) => {
+                if (pointInPolygon(orb.x, orb.y, polygon)) {
+                    capturedIndices.push(idx);
+                }
+            });
+
+            if (capturedIndices.length > 0) {
+                const count = capturedIndices.length;
+                game.combo = Math.min(25, game.combo + count);
+                game.maxCombo = Math.max(game.maxCombo, game.combo);
+                game.captures += count;
+
+                const pointsEarned = count * 150 * game.combo + (count > 1 ? count * 250 : 0);
+                game.score += pointsEarned;
+
+                if (game.mode === 'loop') {
+                    game.timeLeft = Math.min(game.maxTime, game.timeLeft + count * 1.6);
+                }
+
+                // Visual & Audio Celebration
+                audio.playLoopCapture(count, game.combo);
+                paintPermanentSplatter(cx, cy, Math.floor(game.hueTick), 1 + count * 0.45);
+                spawnShockwave(cx, cy, 130 + count * 30, Math.floor(game.hueTick));
+
+                // Remove captured orbs in reverse order and burst particles
+                capturedIndices.sort((a, b) => b - a).forEach(idx => {
+                    const orb = lumenOrbs[idx];
+                    paintPermanentSplatter(orb.x, orb.y, orb.colorIdx, 1.1);
+                    spawnBurstParticles(orb.x, orb.y, orb.colorIdx, 24);
+                    lumenOrbs.splice(idx, 1);
+                });
+
+                const label = count > 1
+                    ? `${count}x PRISM LOOP! +${pointsEarned}`
+                    : `+${pointsEarned}`;
+                spawnFloatingText(cx, cy - 12, label, getColor(game.hueTick));
+                updateHUD();
+            } else {
+                // Artistic loop flourish even without orbs (great for Zen Canvas!)
+                paintPermanentSplatter(cx, cy, Math.floor(game.hueTick), 0.65);
+                audio.playNote(Math.floor(game.hueTick), 0.5, 0.06, 'sine');
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 6. ENTITY SPAWNERS & HELPERS
+         * ============================================================================
+         */
+        function spawnLumenOrb() {
+            const margin = 85;
+            lumenOrbs.push({
+                x: margin + Math.random() * (width - margin * 2),
+                y: margin + 30 + Math.random() * (height - margin * 2 - 30),
+                vx: (Math.random() - 0.5) * 1.1,
+                vy: (Math.random() - 0.5) * 1.1,
+                radius: 14 + Math.random() * 5,
+                colorIdx: Math.floor(Math.random() * 5),
+                pulse: Math.random() * Math.PI * 2,
+                life: 1.0,
+                decay: game.mode === 'zen' ? 0.0004 : 0.0011
+            });
+        }
+
+        function spawnResonanceRing() {
+            const margin = 100;
+            resonanceRings.push({
+                x: margin + Math.random() * (width - margin * 2),
+                y: margin + 30 + Math.random() * (height - margin * 2 - 30),
+                vx: (Math.random() - 0.5) * 1.5,
+                vy: (Math.random() - 0.5) * 1.5,
+                radius: 34,
+                colorIdx: Math.floor(Math.random() * 5),
+                angle: Math.random() * Math.PI * 2,
+                life: 1.0,
+                passed: false
+            });
+        }
+
+        function spawnVoidSpike() {
+            // Spawn along screen edges moving inward
+            const edge = Math.floor(Math.random() * 4);
+            let x, y;
+            if (edge === 0) { x = Math.random() * width; y = -25; }
+            else if (edge === 1) { x = width + 25; y = Math.random() * height; }
+            else if (edge === 2) { x = Math.random() * width; y = height + 25; }
+            else { x = -25; y = Math.random() * height; }
+
+            const targetX = width * 0.25 + Math.random() * width * 0.5;
+            const targetY = height * 0.25 + Math.random() * height * 0.5;
+            const angle = Math.atan2(targetY - y, targetX - x);
+            const speed = 1.4 + Math.random() * 1.3;
+
+            voidSpikes.push({
+                x,
+                y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                radius: 18,
+                rotation: 0,
+                rotSpeed: (Math.random() - 0.5) * 0.08
+            });
+        }
+
+        function spawnBurstParticles(x, y, colorIdx, count = 20) {
+            for (let i = 0; i < count; i++) {
+                const ang = Math.random() * Math.PI * 2;
+                const spd = 1.5 + Math.random() * 5.5;
+                particles.push({
+                    x,
+                    y,
+                    vx: Math.cos(ang) * spd,
+                    vy: Math.sin(ang) * spd,
+                    size: 2 + Math.random() * 3.5,
+                    colorIdx: colorIdx + (i % 2),
+                    life: 1.0,
+                    decay: 0.018 + Math.random() * 0.015
+                });
+            }
+        }
+
+        function spawnShockwave(x, y, maxRadius, colorIdx) {
+            shockwaves.push({
+                x,
+                y,
+                radius: 8,
+                maxRadius,
+                colorIdx,
+                alpha: 0.95
+            });
+        }
+
+        function spawnFloatingText(x, y, text, color = '#ffffff') {
+            floatingTexts.push({
+                x,
+                y,
+                text,
+                color,
+                life: 1.0
+            });
+        }
+
+        /**
+         * ============================================================================
+         * 7. CLICK SHOCKWAVE INTERACTION (SHATTER VOID SPIKES & BLOOM ORBS)
+         * ============================================================================
+         */
+        function triggerClickShockwave(x, y) {
+            if (game.status !== 'playing') return;
+
+            const waveRadius = 145;
+            const colorIdx = Math.floor(game.hueTick);
+            spawnShockwave(x, y, waveRadius, colorIdx);
+            spawnBurstParticles(x, y, colorIdx, 14);
+            paintPermanentSplatter(x, y, colorIdx, 0.75);
+            audio.playShockwave();
+
+            // Check if shockwave shatters nearby Void Spikes!
+            let shatteredCount = 0;
+            for (let i = voidSpikes.length - 1; i >= 0; i--) {
+                const spike = voidSpikes[i];
+                const dist = Math.hypot(spike.x - x, spike.y - y);
+                if (dist <= waveRadius + spike.radius) {
+                    shatteredCount++;
+                    game.combo = Math.min(25, game.combo + 1);
+                    game.maxCombo = Math.max(game.maxCombo, game.combo);
+                    const pts = 200 * game.combo;
+                    game.score += pts;
+
+                    paintPermanentSplatter(spike.x, spike.y, colorIdx + 2, 0.95);
+                    spawnBurstParticles(spike.x, spike.y, colorIdx + 2, 22);
+                    spawnFloatingText(spike.x, spike.y, `SHATTERED! +${pts}`, '#38bdf8');
+                    voidSpikes.splice(i, 1);
+                }
+            }
+
+            if (shatteredCount > 0) {
+                audio.playLoopCapture(shatteredCount, game.combo);
+                updateHUD();
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 8. GAME LIFECYCLE & HUD UPDATES
+         * ============================================================================
+         */
+        function resetRun(selectedMode = game.mode) {
+            game.mode = selectedMode;
+            game.status = 'playing';
+            game.score = 0;
+            game.combo = 1;
+            game.maxCombo = 1;
+            game.captures = 0;
+            game.timeLeft = 60;
+            game.integrity = 100;
+            game.spawnTimer = 0;
+            game.hazardTimer = 0;
+
+            lumenOrbs = [];
+            resonanceRings = [];
+            voidSpikes = [];
+            particles = [];
+            shockwaves = [];
+            floatingTexts = [];
+            pointer.trail = [];
+
+            // Clear persistent art layer to deep dark canvas
+            artCtx.globalCompositeOperation = 'source-over';
+            artCtx.fillStyle = '#05050a';
+            artCtx.fillRect(0, 0, width, height);
+
+            initRibbonStrands();
+
+            // Seed initial entities
+            if (game.mode === 'loop' || game.mode === 'zen') {
+                for (let i = 0; i < 6; i++) spawnLumenOrb();
+            }
+            if (game.mode === 'conduit') {
+                for (let i = 0; i < 4; i++) spawnResonanceRing();
+            }
+
+            syncModeButtons();
+            updateHUD();
+        }
+
+        function endRun(title = 'Masterpiece Woven', subtitle = 'Your strokes painted a unique luminous composition.') {
+            game.status = 'gameover';
+            document.getElementById('endBadgeText').textContent = game.mode === 'zen' ? 'Zen Session' : 'Run Complete';
+            document.getElementById('endTitle').textContent = title;
+            document.getElementById('endSubtitle').textContent = subtitle;
+            document.getElementById('finalScore').textContent = game.score.toLocaleString();
+            document.getElementById('finalCombo').textContent = `x${game.maxCombo}`;
+            document.getElementById('finalCaptures').textContent = game.captures;
+
+            document.getElementById('resumeBtn').classList.add('hidden');
+            document.getElementById('restartBtn').classList.add('col-span-2');
+            document.getElementById('endModal').classList.remove('hidden');
+        }
+
+        function pauseRun() {
+            if (game.status !== 'playing') return;
+            game.status = 'paused';
+            document.getElementById('endBadgeText').textContent = 'Studio Paused';
+            document.getElementById('endTitle').textContent = 'Canvas In Progress';
+            document.getElementById('endSubtitle').textContent = 'Download your current painting or resume weaving.';
+            document.getElementById('finalScore').textContent = game.score.toLocaleString();
+            document.getElementById('finalCombo').textContent = `x${game.maxCombo}`;
+            document.getElementById('finalCaptures').textContent = game.captures;
+
+            document.getElementById('resumeBtn').classList.remove('hidden');
+            document.getElementById('restartBtn').classList.remove('col-span-2');
+            document.getElementById('endModal').classList.remove('hidden');
+        }
+
+        function updateHUD() {
+            document.getElementById('scoreDisplay').textContent = game.score.toLocaleString();
+            document.getElementById('comboDisplay').textContent = `x${game.combo}`;
+
+            const meterLabel = document.getElementById('meterLabel');
+            const meterValue = document.getElementById('meterValue');
+            const meterBar = document.getElementById('meterBar');
+
+            if (game.mode === 'loop') {
+                meterLabel.textContent = 'Time';
+                const secs = Math.max(0, Math.ceil(game.timeLeft));
+                meterValue.textContent = `${secs}s`;
+                meterValue.className = secs <= 10 ? 'text-rose-400 font-mono' : 'text-emerald-400 font-mono';
+                meterBar.style.width = `${Math.min(100, (game.timeLeft / game.maxTime) * 100)}%`;
+            } else if (game.mode === 'conduit') {
+                meterLabel.textContent = 'Prism Shield';
+                const pct = Math.max(0, Math.round(game.integrity));
+                meterValue.textContent = `${pct}%`;
+                meterValue.className = pct <= 30 ? 'text-rose-400 font-mono' : 'text-cyan-400 font-mono';
+                meterBar.style.width = `${pct}%`;
+            } else {
+                meterLabel.textContent = 'Mode';
+                meterValue.textContent = 'ZEN ∞';
+                meterValue.className = 'text-amber-300 font-mono';
+                meterBar.style.width = '100%';
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 9. MAIN UPDATE & RENDER LOOP
+         * ============================================================================
+         */
+        function update(dt) {
+            game.hueTick += dt * 3.5;
+            if (game.shakeTime > 0) game.shakeTime -= dt;
+
+            // Update ribbon strands smoothly around pointer
+            const vel = Math.hypot(pointer.vx, pointer.vy);
+            ribbonStrands.forEach((s, idx) => {
+                const prevX = s.x;
+                const prevY = s.y;
+                const spread = pointer.isDown ? 26 : 12;
+                const angle = game.hueTick * 0.9 + s.phase;
+                const tx = pointer.x + Math.cos(angle) * spread;
+                const ty = pointer.y + Math.sin(angle) * spread;
+
+                s.vx = (s.vx + (tx - s.x) * s.spring) * s.friction;
+                s.vy = (s.vy + (ty - s.y) * s.spring) * s.friction;
+                s.x += s.vx;
+                s.y += s.vy;
+
+                if (game.status === 'playing' && vel > 0.6) {
+                    paintPermanentRibbonStroke(prevX, prevY, s.x, s.y, s.colorIdx + game.hueTick, pointer.isDown ? 1.5 : 0.8);
+                }
+            });
+
+            // Age out pointer trail points
+            const now = performance.now();
+            const maxAge = pointer.isDown ? 1350 : 850;
+            pointer.trail = pointer.trail.filter(pt => now - pt.time < maxAge);
+
+            if (game.status !== 'playing') return;
+
+            // Mode Timers & Spawning
+            game.spawnTimer += dt;
+            game.hazardTimer += dt;
+
+            if (game.mode === 'loop') {
+                game.timeLeft -= dt;
+                if (game.timeLeft <= 0) {
+                    game.timeLeft = 0;
+                    updateHUD();
+                    endRun('Time Expired', 'Your luminous loops wove a brilliant tapestry!');
+                    return;
+                }
+                if (game.spawnTimer > 1.35 && lumenOrbs.length < 9) {
+                    spawnLumenOrb();
+                    game.spawnTimer = 0;
+                }
+                if (game.hazardTimer > 3.8 && voidSpikes.length < 4) {
+                    spawnVoidSpike();
+                    game.hazardTimer = 0;
+                }
+            } else if (game.mode === 'conduit') {
+                if (game.spawnTimer > 1.45 && resonanceRings.length < 6) {
+                    spawnResonanceRing();
+                    game.spawnTimer = 0;
+                }
+                if (game.hazardTimer > 2.6 && voidSpikes.length < 6) {
+                    spawnVoidSpike();
+                    game.hazardTimer = 0;
+                }
+            } else if (game.mode === 'zen') {
+                if (game.spawnTimer > 1.8 && lumenOrbs.length < 7) {
+                    spawnLumenOrb();
+                    game.spawnTimer = 0;
+                }
+            }
+
+            // Update HUD clock once per frame smoothly
+            updateHUD();
+
+            // Update Lumen Orbs
+            for (let i = lumenOrbs.length - 1; i >= 0; i--) {
+                const orb = lumenOrbs[i];
+                orb.x += orb.vx;
+                orb.y += orb.vy;
+                orb.pulse += dt * 4;
+                orb.life -= orb.decay;
+
+                // Soft bounce off edges
+                if (orb.x < 50 || orb.x > width - 50) orb.vx *= -1;
+                if (orb.y < 75 || orb.y > height - 50) orb.vy *= -1;
+
+                if (orb.life <= 0) {
+                    lumenOrbs.splice(i, 1);
+                }
+            }
+
+            // Update Resonance Rings (Starlight Conduit Mode)
+            for (let i = resonanceRings.length - 1; i >= 0; i--) {
+                const ring = resonanceRings[i];
+                ring.x += ring.vx;
+                ring.y += ring.vy;
+                ring.angle += dt * 1.8;
+                ring.life -= 0.0009;
+
+                if (ring.x < 60 || ring.x > width - 60) ring.vx *= -1;
+                if (ring.y < 80 || ring.y > height - 60) ring.vy *= -1;
+
+                // Check if cursor ribbon passes through ring
+                const dist = Math.hypot(pointer.x - ring.x, pointer.y - ring.y);
+                if (!ring.passed && dist < ring.radius) {
+                    ring.passed = true;
+                    game.combo = Math.min(25, game.combo + 1);
+                    game.maxCombo = Math.max(game.maxCombo, game.combo);
+                    game.captures++;
+                    const pts = 120 * game.combo;
+                    game.score += pts;
+                    game.integrity = Math.min(100, game.integrity + 4);
+
+                    audio.playNote(game.combo + ring.colorIdx, 0.55, 0.11, 'triangle');
+                    paintPermanentSplatter(ring.x, ring.y, ring.colorIdx, 1.15);
+                    spawnBurstParticles(ring.x, ring.y, ring.colorIdx, 20);
+                    spawnShockwave(ring.x, ring.y, 95, ring.colorIdx);
+                    spawnFloatingText(ring.x, ring.y - 10, `RESONANCE +${pts}`, getColor(ring.colorIdx));
+                    resonanceRings.splice(i, 1);
+                    continue;
+                }
+
+                if (ring.life <= 0) {
+                    game.combo = 1; // Missed ring resets streak
+                    resonanceRings.splice(i, 1);
+                }
+            }
+
+            // Update Void Spikes (Hazards)
+            for (let i = voidSpikes.length - 1; i >= 0; i--) {
+                const spike = voidSpikes[i];
+                spike.x += spike.vx;
+                spike.y += spike.vy;
+                spike.rotation += spike.rotSpeed;
+
+                // Check collision with player cursor
+                const dist = Math.hypot(pointer.x - spike.x, pointer.y - spike.y);
+                if (dist < spike.radius + 8) {
+                    audio.playHazardHit();
+                    game.combo = 1;
+                    game.shakeTime = 0.25;
+                    spawnBurstParticles(spike.x, spike.y, 3, 18);
+                    spawnFloatingText(spike.x, spike.y, 'VOID IMPACT!', '#fb7185');
+                    voidSpikes.splice(i, 1);
+
+                    if (game.mode === 'loop') {
+                        game.timeLeft = Math.max(0, game.timeLeft - 5);
+                    } else if (game.mode === 'conduit') {
+                        game.integrity -= 25;
+                        if (game.integrity <= 0) {
+                            game.integrity = 0;
+                            updateHUD();
+                            endRun('Prism Shattered', 'Void Spikes overwhelmed your ribbon. Click to unleash shockwaves!');
+                            return;
+                        }
+                    }
+                    continue;
+                }
+
+                // Despawn far off-screen
+                if (spike.x < -80 || spike.x > width + 80 || spike.y < -80 || spike.y > height + 80) {
+                    voidSpikes.splice(i, 1);
+                }
+            }
+
+            // Update Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vx *= 0.95;
+                p.vy *= 0.95;
+                p.life -= p.decay;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            // Update Shockwaves
+            for (let i = shockwaves.length - 1; i >= 0; i--) {
+                const sw = shockwaves[i];
+                sw.radius += (sw.maxRadius - sw.radius) * 0.16;
+                sw.alpha -= 0.04;
+                if (sw.alpha <= 0) shockwaves.splice(i, 1);
+            }
+
+            // Update Floating Score Callouts
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y -= 0.85;
+                ft.life -= 0.022;
+                if (ft.life <= 0) floatingTexts.splice(i, 1);
+            }
+
+            pointer.vx *= 0.85;
+            pointer.vy *= 0.85;
+        }
+
+        function render() {
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-over';
+
+            // Screen shake on hazard impact
+            if (game.shakeTime > 0) {
+                const mag = game.shakeTime * 22;
+                ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
+            }
+
+            // 1. Draw the persistent generative artwork layer
+            ctx.drawImage(artLayer, 0, 0, width, height);
+
+            // Switch to luminous additive blending for active entities
+            ctx.globalCompositeOperation = 'lighter';
+
+            // 2. Render Lumen Orbs
+            lumenOrbs.forEach(orb => {
+                const r = orb.radius + Math.sin(orb.pulse) * 2.5;
+                const grad = ctx.createRadialGradient(orb.x, orb.y, 1, orb.x, orb.y, r * 2.1);
+                grad.addColorStop(0, '#ffffff');
+                grad.addColorStop(0.35, getColor(orb.colorIdx, 0.9 * orb.life));
+                grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(orb.x, orb.y, r * 2.1, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Inner diamond prism core
+                ctx.save();
+                ctx.translate(orb.x, orb.y);
+                ctx.rotate(orb.pulse * 0.5);
+                ctx.strokeStyle = `rgba(255,255,255,${0.85 * orb.life})`;
+                ctx.lineWidth = 1.5;
+                ctx.strokeRect(-r * 0.45, -r * 0.45, r * 0.9, r * 0.9);
+                ctx.restore();
+            });
+
+            // 3. Render Resonance Rings (Conduit Mode)
+            resonanceRings.forEach(ring => {
+                ctx.save();
+                ctx.translate(ring.x, ring.y);
+                ctx.rotate(ring.angle);
+
+                ctx.strokeStyle = getColor(ring.colorIdx, 0.9 * ring.life);
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(0, 0, ring.radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Dashed inner harmonic ring
+                ctx.setLineDash([8, 8]);
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(0, 0, ring.radius * 0.68, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            // 4. Render Void Spikes (Hazards)
+            ctx.globalCompositeOperation = 'source-over';
+            voidSpikes.forEach(spike => {
+                ctx.save();
+                ctx.translate(spike.x, spike.y);
+                ctx.rotate(spike.rotation);
+
+                ctx.fillStyle = '#09090f';
+                ctx.strokeStyle = '#f43f5e';
+                ctx.lineWidth = 2.2;
+
+                ctx.beginPath();
+                const points = 6;
+                for (let i = 0; i < points * 2; i++) {
+                    const rad = i % 2 === 0 ? spike.radius : spike.radius * 0.45;
+                    const a = (i / (points * 2)) * Math.PI * 2;
+                    if (i === 0) ctx.moveTo(Math.cos(a) * rad, Math.sin(a) * rad);
+                    else ctx.lineTo(Math.cos(a) * rad, Math.sin(a) * rad);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            ctx.globalCompositeOperation = 'lighter';
+
+            // 5. Render Primary Player Ribbon Trail (Loop Tether)
+            if (pointer.trail.length > 1) {
+                for (let i = 1; i < pointer.trail.length; i++) {
+                    const p1 = pointer.trail[i - 1];
+                    const p2 = pointer.trail[i];
+                    const ratio = i / pointer.trail.length;
+
+                    ctx.strokeStyle = getColor(p2.colorIdx, ratio * (pointer.isDown ? 0.95 : 0.65));
+                    ctx.lineWidth = ratio * (pointer.isDown ? 6.5 : 3.5);
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                }
+            }
+
+            // 6. Render Harmonic Silk Strands around Cursor
+            ribbonStrands.forEach(s => {
+                ctx.fillStyle = getColor(s.colorIdx + game.hueTick, 0.85);
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, 2.2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // 7. Render Particles & Shockwaves
+            particles.forEach(p => {
+                ctx.fillStyle = getColor(p.colorIdx, p.life);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            shockwaves.forEach(sw => {
+                ctx.strokeStyle = getColor(sw.colorIdx, sw.alpha);
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+
+            // 8. Render Custom Prism Cursor
+            const cursorGrad = ctx.createRadialGradient(pointer.x, pointer.y, 1, pointer.x, pointer.y, 20);
+            cursorGrad.addColorStop(0, '#ffffff');
+            cursorGrad.addColorStop(0.4, getColor(game.hueTick, 0.85));
+            cursorGrad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = cursorGrad;
+            ctx.beginPath();
+            ctx.arc(pointer.x, pointer.y, 20, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 9. Floating Score Callouts
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.font = '700 13px "Space Grotesk", sans-serif';
+            ctx.textAlign = 'center';
+            floatingTexts.forEach(ft => {
+                ctx.globalAlpha = Math.max(0, ft.life);
+                ctx.fillStyle = ft.color;
+                ctx.fillText(ft.text, ft.x, ft.y);
+            });
+            ctx.globalAlpha = 1;
+
+            ctx.restore();
+        }
+
+        function gameLoop(timestamp) {
+            if (!game.lastTimestamp) game.lastTimestamp = timestamp;
+            const dt = Math.min(0.05, (timestamp - game.lastTimestamp) / 1000);
+            game.lastTimestamp = timestamp;
+
+            update(dt);
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        /**
+         * ============================================================================
+         * 10. POINTER & UI EVENT BINDINGS
+         * ============================================================================
+         */
+        function handlePointerMove(x, y) {
+            pointer.vx = x - pointer.x;
+            pointer.vy = y - pointer.y;
+            pointer.prevX = pointer.x;
+            pointer.prevY = pointer.y;
+            pointer.x = x;
+            pointer.y = y;
+            pointer.active = true;
+
+            const speed = Math.hypot(pointer.vx, pointer.vy);
+            if (speed > 2) {
+                pointer.trail.push({
+                    x,
+                    y,
+                    time: performance.now(),
+                    colorIdx: Math.floor(game.hueTick)
+                });
+
+                if (game.status === 'playing') {
+                    audio.playTrailSpark(speed);
+                    if (game.mode === 'loop' || game.mode === 'zen') {
+                        checkTrailForLoop();
+                    }
+                }
+            }
+        }
+
+        canvas.addEventListener('pointerdown', (e) => {
+            pointer.isDown = true;
+            handlePointerMove(e.clientX, e.clientY);
+            triggerClickShockwave(e.clientX, e.clientY);
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            handlePointerMove(e.clientX, e.clientY);
+        });
+
+        window.addEventListener('pointerup', () => {
+            pointer.isDown = false;
+        });
+
+        // Start Screen Mode Cards
+        function syncModeButtons() {
+            document.querySelectorAll('.start-mode-card').forEach(card => {
+                const isSelected = card.dataset.selectMode === game.mode;
+                card.className = isSelected
+                    ? 'start-mode-card p-3.5 rounded-2xl border-2 border-cyan-400 bg-cyan-500/15 transition-all hover:scale-[1.02]'
+                    : 'start-mode-card p-3.5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all hover:scale-[1.02]';
+            });
+
+            document.querySelectorAll('.hud-mode-btn').forEach(btn => {
+                const isSelected = btn.dataset.mode === game.mode;
+                btn.className = isSelected
+                    ? 'hud-mode-btn px-3 py-1 rounded-xl text-xs font-medium transition-all bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                    : 'hud-mode-btn px-3 py-1 rounded-xl text-xs font-medium transition-all text-slate-400 hover:text-white border border-transparent';
+            });
+        }
+
+        document.querySelectorAll('.start-mode-card').forEach(card => {
+            card.addEventListener('click', () => {
+                game.mode = card.dataset.selectMode;
+                syncModeButtons();
+            });
+        });
+
+        document.querySelectorAll('.hud-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                resetRun(btn.dataset.mode);
+                document.getElementById('startOverlay').classList.add('hidden');
+                document.getElementById('endModal').classList.add('hidden');
+            });
+        });
+
+        // Palette UI & Quick Cycle
+        function renderPaletteSelectors() {
+            const row = document.getElementById('startPaletteRow');
+            row.innerHTML = '';
+            PALETTES.forEach((pal, idx) => {
+                const btn = document.createElement('button');
+                const active = idx === game.paletteIndex;
+                btn.className = `px-3 py-1.5 rounded-xl border text-xs font-medium flex items-center gap-2 transition-all ${
+                    active ? 'border-white bg-white/15 text-white scale-105' : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/30'
+                }`;
+                btn.innerHTML = `
+                    <span class="w-3 h-3 rounded-full" style="background: linear-gradient(135deg, ${pal.colors.join(',')})"></span>
+                    <span>${pal.name}</span>
+                `;
+                btn.addEventListener('click', () => {
+                    game.paletteIndex = idx;
+                    updatePaletteBadge();
+                    renderPaletteSelectors();
+                });
+                row.appendChild(btn);
+            });
+            updatePaletteBadge();
+        }
+
+        function updatePaletteBadge() {
+            const pal = getPalette();
+            document.getElementById('paletteNameLabel').textContent = pal.name;
+            document.getElementById('paletteSwatch').style.background = `linear-gradient(135deg, ${pal.colors.join(',')})`;
+        }
+
+        document.getElementById('paletteCycleBtn').addEventListener('click', () => {
+            game.paletteIndex = (game.paletteIndex + 1) % PALETTES.length;
+            updatePaletteBadge();
+            renderPaletteSelectors();
+            showToast(`Palette: ${getPalette().name}`);
+        });
+
+        // Start, Pause, Resume, Restart & Save PNG Buttons
+        document.getElementById('startGameBtn').addEventListener('click', () => {
+            audio.init();
+            document.getElementById('startOverlay').classList.add('hidden');
+            resetRun(game.mode);
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            if (game.status === 'playing') pauseRun();
+            else if (game.status === 'paused') {
+                game.status = 'playing';
+                document.getElementById('endModal').classList.add('hidden');
+            }
+        });
+
+        document.getElementById('resumeBtn').addEventListener('click', () => {
+            game.status = 'playing';
+            document.getElementById('endModal').classList.add('hidden');
+        });
+
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            document.getElementById('endModal').classList.add('hidden');
+            resetRun(game.mode);
+        });
+
+        document.getElementById('backToMenuBtn').addEventListener('click', () => {
+            game.status = 'menu';
+            document.getElementById('endModal').classList.add('hidden');
+            document.getElementById('startOverlay').classList.remove('hidden');
+        });
+
+        document.getElementById('muteBtn').addEventListener('click', () => {
+            const muted = audio.toggleMute();
+            const icon = document.getElementById('muteIcon');
+            icon.setAttribute('data-lucide', muted ? 'volume-x' : 'volume-2');
+            lucide.createIcons();
+            showToast(muted ? 'Soundscape muted' : 'Soundscape active');
+        });
+
+        document.getElementById('saveArtBtn').addEventListener('click', () => {
+            try {
+                const link = document.createElement('a');
+                const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+                link.download = `aetheris-prism-weaver-${stamp}.png`;
+                link.href = artLayer.toDataURL('image/png', 1.0);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showToast('Painting downloaded as PNG!');
+            } catch (e) {
+                showToast('Could not export PNG');
+            }
+        });
+
+        let toastTimer;
+        function showToast(msg) {
+            const el = document.getElementById('toast');
+            document.getElementById('toastText').textContent = msg;
+            el.classList.remove('opacity-0', 'translate-y-2');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                el.classList.add('opacity-0', 'translate-y-2');
+            }, 2200);
+        }
+
+        window.addEventListener('resize', () => resizeCanvases(true));
+
+        window.onload = () => {
+            resizeCanvases(false);
+            renderPaletteSelectors();
+            syncModeButtons();
+            initRibbonStrands();
+
+            // Ambient background bloom on menu screen
+            for (let i = 0; i < 5; i++) {
+                paintPermanentSplatter(
+                    width * (0.2 + Math.random() * 0.6),
+                    height * (0.2 + Math.random() * 0.6),
+                    i,
+                    1.4
+                );
+            }
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
