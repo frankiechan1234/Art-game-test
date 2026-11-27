@@ -2,131 +2,34 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Aetheris: Prism Weaver</title>
 <style>
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-touch-callout: none;
-  }
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
   html, body {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    touch-action: none;
-    overscroll-behavior: none;
-    background: #06070d;
-    color: #f8fafc;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden;
+    touch-action: none; background: #06070d; color: #f8fafc;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
   }
-  canvas {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-    touch-action: none;
-  }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
   #art { z-index: 1; }
   #fx { z-index: 2; pointer-events: none; }
-
-  #hud {
-    position: fixed;
-    top: max(12px, env(safe-area-inset-top));
-    left: 12px;
-    right: 12px;
-    z-index: 10;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
+  #bar {
+    position: fixed; top: 10px; left: 10px; right: 10px; z-index: 20;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;
     pointer-events: none;
   }
-  .group {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(15, 23, 42, 0.84);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    padding: 6px 10px;
-    border-radius: 999px;
-    pointer-events: auto;
-    font-size: 12px;
-    font-weight: 700;
+  .pill {
+    display: flex; align-items: center; gap: 6px; pointer-events: auto;
+    background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.2);
+    padding: 5px 10px; border-radius: 99px; font-size: 12px; font-weight: 700;
   }
-  .group b { color: #38bdf8; }
-  .pal-dot {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    cursor: pointer;
-    touch-action: manipulation;
-    border: 2px solid transparent;
-    transition: transform 0.15s;
-  }
-  .pal-dot.active {
-    border-color: #ffffff;
-    transform: scale(1.2);
-  }
+  .pill b { color: #38bdf8; }
   button {
-    background: rgba(30, 41, 59, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #f8fafc;
-    padding: 6px 11px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    touch-action: manipulation;
+    background: #1e293b; border: 1px solid rgba(255,255,255,0.25); color: #fff;
+    padding: 5px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer;
   }
-  button:active { transform: scale(0.96); }
-  button.primary {
-    background: #0284c7;
-    border-color: #38bdf8;
-  }
-  .overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 30;
-    background: rgba(6, 7, 13, 0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-  }
-  .hidden { display: none !important; }
-  .card {
-    max-width: 430px;
-    width: 100%;
-    background: #0f172a;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 22px;
-    padding: 24px 20px;
-    text-align: center;
-  }
-  h1 { font-size: 25px; color: #38bdf8; margin-bottom: 8px; }
-  p { color: #94a3b8; font-size: 14px; line-height: 1.45; margin-bottom: 18px; }
-  .mode-btn {
-    width: 100%;
-    display: block;
-    text-align: left;
-    padding: 14px 16px;
-    border-radius: 14px;
-    margin-bottom: 10px;
-    background: #1e293b;
-  }
-  .mode-btn strong { display: block; font-size: 15px; color: #f8fafc; margin-bottom: 2px; }
-  .mode-btn span { font-size: 12px; color: #94a3b8; }
-  .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+  button.on { background: #0284c7; border-color: #38bdf8; }
 </style>
 </head>
 <body>
@@ -134,36 +37,164 @@
 <canvas id="art"></canvas>
 <canvas id="fx"></canvas>
 
-<div id="hud" class="hidden">
-  <div class="group" id="statsGroup">
-    <span>SCORE <b id="sVal">0</b></span>
+<div id="bar">
+  <div class="pill">
+    <span>SCORE <b id="sc">0</b></span>
     <span>•</span>
-    <span>COMBO <b id="cVal">1x</b></span>
-    <span id="tSep">•</span>
-    <span id="tWrap">TIME <b id="tVal">45s</b></span>
+    <span>COMBO <b id="cb">1x</b></span>
   </div>
-  <div class="group" id="paletteGroup"></div>
-  <div class="group">
-    <button id="symBtn">Mirror: OFF</button>
-    <button id="clearBtn">Clear</button>
-    <button class="primary" id="saveBtn">Save</button>
-    <button id="menuBtn">Menu</button>
+  <div class="pill">
+    <button class="on" id="bOrbs" onclick="toggleOrbs()">Orbs: ON</button>
+    <button id="bMir" onclick="toggleMirror()">Mirror: OFF</button>
+    <button onclick="clearAll()">Clear</button>
+    <button class="on" onclick="savePng()">Save</button>
   </div>
 </div>
 
-<div class="overlay" id="menuOverlay">
-  <div class="card">
-    <h1>Aetheris: Prism Weaver</h1>
-    <p>Draw glowing silk ribbons with your finger or mouse, circle orbs to score combos, or switch to pure free-draw.</p>
-    <button class="mode-btn" id="btnArcade">
-      <strong>Draw + Game (Timed 45s)</strong>
-      <span>Draw loops around glowing orbs to capture them, stack combos, and extend your timer.</span>
-    </button>
-    <button class="mode-btn" id="btnZen">
-      <strong>Draw + Zen Orbs (No Timer)</strong>
-      <span>Paint freely with mirror symmetry while catching gentle floating orbs at your own pace.</span>
-    </button>
-    <button class="mode-btn" id="btnDrawOnly">
-      <strong>Pure Silk Draw (No Orbs)</strong>
-      <span>Blank glowing canvas with mirror mode and instant PNG export.</span>
-    </button
+<script>
+const art = document.getElementById('art'), fx = document.getElementById('fx');
+const aCtx = art.getContext('2d'), fCtx = fx.getContext('2d');
+const COLS = ['#38bdf8', '#818cf8', '#c084fc', '#f472b6', '#2dd4bf', '#fbbf24'];
+
+let W = 0, H = 0, showOrbs = true, mirror = false, score = 0, combo = 1;
+let down = false, px = 0, py = 0, x = 0, y = 0;
+let trail = [], orbs = [], sparks = [];
+
+function resize() {
+  W = window.innerWidth; H = window.innerHeight;
+  art.width = fx.width = W; art.height = fx.height = H;
+  aCtx.fillStyle = '#06070d'; aCtx.fillRect(0, 0, W, H);
+}
+window.addEventListener('resize', resize);
+resize();
+
+function randCol() { return COLS[Math.floor(Math.random() * COLS.length)]; }
+
+function spawnOrb() {
+  orbs.push({
+    x: 40 + Math.random() * (W - 80), y: 70 + Math.random() * (H - 110),
+    vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60,
+    r: 15, c: randCol()
+  });
+}
+for (let i = 0; i < 6; i++) spawnOrb();
+
+function toggleOrbs() {
+  showOrbs = !showOrbs;
+  const b = document.getElementById('bOrbs');
+  b.textContent = showOrbs ? 'Orbs: ON' : 'Orbs: OFF';
+  b.classList.toggle('on', showOrbs);
+}
+
+function toggleMirror() {
+  mirror = !mirror;
+  const b = document.getElementById('bMir');
+  b.textContent = mirror ? 'Mirror: ON' : 'Mirror: OFF';
+  b.classList.toggle('on', mirror);
+}
+
+function clearAll() {
+  aCtx.globalCompositeOperation = 'source-over';
+  aCtx.fillStyle = '#06070d'; aCtx.fillRect(0, 0, W, H);
+  trail = []; score = 0; combo = 1;
+  document.getElementById('sc').textContent = '0';
+  document.getElementById('cb').textContent = '1x';
+}
+
+function savePng() {
+  const a = document.createElement('a');
+  a.download = 'prism-art.png'; a.href = art.toDataURL('image/png'); a.click();
+}
+
+function boom(bx, by, c) {
+  aCtx.save(); aCtx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 16; i++) {
+    const ang = Math.random() * 6.28, d = Math.random() * 40;
+    aCtx.fillStyle = c; aCtx.globalAlpha = 0.35;
+    aCtx.beginPath(); aCtx.arc(bx + Math.cos(ang)*d, by + Math.sin(ang)*d, 3 + Math.random()*4, 0, 6.28); aCtx.fill();
+    sparks.push({ x: bx, y: by, vx: Math.cos(ang)*140, vy: Math.sin(ang)*140, c, life: 0.5 });
+  }
+  aCtx.restore();
+}
+
+function move(nx, ny) {
+  if (!down) { px = nx; py = ny; down = true; }
+  if (Math.hypot(nx - px, ny - py) > 1.5) {
+    const c = COLS[Math.floor((performance.now() * 0.004) % COLS.length)];
+    aCtx.save(); aCtx.globalCompositeOperation = 'lighter';
+    aCtx.strokeStyle = c; aCtx.globalAlpha = 0.35; aCtx.lineWidth = 5; aCtx.lineCap = 'round';
+    aCtx.beginPath(); aCtx.moveTo(px, py); aCtx.lineTo(nx, ny); aCtx.stroke();
+    if (mirror) { aCtx.beginPath(); aCtx.moveTo(W - px, py); aCtx.lineTo(W - nx, ny); aCtx.stroke(); }
+    aCtx.restore();
+
+    trail.push({ x: nx, y: ny, c });
+    if (trail.length > 40) trail.shift();
+
+    if (showOrbs && trail.length > 14) {
+      for (let i = 0; i < trail.length - 12; i++) {
+        if (Math.hypot(nx - trail[i].x, ny - trail[i].y) < 38) {
+          const mid = trail[Math.floor((i + trail.length) / 2)];
+          const cx = (nx + mid.x) / 2, cy = (ny + mid.y) / 2;
+          orbs.forEach((o, idx) => {
+            if (Math.hypot(o.x - cx, o.y - cy) < 125) {
+              boom(o.x, o.y, o.c);
+              score += 100 * combo; combo = Math.min(combo + 1, 20);
+              document.getElementById('sc').textContent = score;
+              document.getElementById('cb').textContent = combo + 'x';
+              orbs.splice(idx, 1); spawnOrb();
+            }
+          });
+          trail = []; break;
+        }
+      }
+    }
+  }
+  px = nx; py = ny; x = nx; y = ny;
+}
+
+art.addEventListener('mousedown', e => { down = false; trail = []; move(e.clientX, e.clientY); });
+art.addEventListener('mousemove', e => { if (e.buttons === 1) move(e.clientX, e.clientY); });
+window.addEventListener('mouseup', () => { down = false; trail = []; });
+
+art.addEventListener('touchstart', e => { e.preventDefault(); down = false; trail = []; move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+art.addEventListener('touchmove', e => { e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+art.addEventListener('touchend', e => { e.preventDefault(); down = false; trail = []; }, { passive: false });
+
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min((now - last) / 1000, 0.05); last = now;
+  fCtx.clearRect(0, 0, W, H);
+
+  if (showOrbs) {
+    orbs.forEach(o => {
+      o.x += o.vx * dt; o.y += o.vy * dt;
+      if (o.x < 30 || o.x > W - 30) o.vx *= -1;
+      if (o.y < 65 || o.y > H - 30) o.vy *= -1;
+      if (down && Math.hypot(x - o.x, y - o.y) < o.r + 18) {
+        boom(o.x, o.y, o.c);
+        score += 30 * combo;
+        document.getElementById('sc').textContent = score;
+        o.x = 40 + Math.random() * (W - 80); o.y = 70 + Math.random() * (H - 110); o.c = randCol();
+      }
+      fCtx.fillStyle = o.c; fCtx.beginPath(); fCtx.arc(o.x, o.y, o.r, 0, 6.28); fCtx.fill();
+      fCtx.fillStyle = '#fff'; fCtx.beginPath(); fCtx.arc(o.x, o.y, 5, 0, 6.28); fCtx.fill();
+    });
+  }
+
+  for (let i = 1; i < trail.length; i++) {
+    fCtx.strokeStyle = trail[i].c; fCtx.lineWidth = (i / trail.length) * 6; fCtx.lineCap = 'round';
+    fCtx.beginPath(); fCtx.moveTo(trail[i-1].x, trail[i-1].y); fCtx.lineTo(trail[i].x, trail[i].y); fCtx.stroke();
+    if (mirror) { fCtx.beginPath(); fCtx.moveTo(W - trail[i-1].x, trail[i-1].y); fCtx.lineTo(W - trail[i].x, trail[i].y); fCtx.stroke(); }
+  }
+
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const p = sparks[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
+    if (p.life <= 0) { sparks.splice(i, 1); continue; }
+    fCtx.fillStyle = p.c; fCtx.beginPath(); fCtx.arc(p.x, p.y, 3, 0, 6.28); fCtx.fill();
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
