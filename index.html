@@ -2,533 +2,346 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Aetheris: Prism Weaver</title>
 <style>
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-touch-callout: none;
-  }
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
   html, body {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    touch-action: none;
-    overscroll-behavior: none;
-    background: #06070d;
-    color: #f1f5f9;
+    position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden;
+    touch-action: none; overscroll-behavior: none;
+    background: #06070d; color: #f8fafc;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
-  canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-    touch-action: none;
-  }
-  #artCanvas { z-index: 1; }
-  #fxCanvas { z-index: 2; pointer-events: none; }
-
-  /* HUD */
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #art { z-index: 1; }
+  #fx { z-index: 2; pointer-events: none; }
   #hud {
-    position: fixed;
-    top: max(12px, env(safe-area-inset-top));
-    left: 12px;
-    right: 12px;
-    z-index: 10;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
+    position: fixed; top: 12px; left: 12px; right: 12px; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
     pointer-events: none;
-    transition: opacity 0.3s;
   }
-  .hud-group {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    pointer-events: auto;
-    flex-wrap: wrap;
-  }
+  .row { display: flex; gap: 8px; align-items: center; pointer-events: auto; }
   .pill {
-    background: rgba(15, 23, 42, 0.78);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    padding: 6px 12px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.4px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.16);
+    padding: 6px 12px; border-radius: 99px; font-size: 12px; font-weight: 700;
   }
-  .pill span.val { color: #38bdf8; font-variant-numeric: tabular-nums; font-size: 14px; }
-  .pill.combo span.val { color: #f472b6; }
-  .pill.timer span.val { color: #fbbf24; }
-  button.icon-btn {
-    background: rgba(15, 23, 42, 0.82);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    color: #f8fafc;
-    padding: 7px 12px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    touch-action: manipulation;
-    transition: all 0.18s ease;
+  .pill b { color: #38bdf8; }
+  button {
+    background: rgba(30, 41, 59, 0.9); border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff; padding: 8px 14px; border-radius: 99px; font-size: 13px; font-weight: 600;
+    cursor: pointer; touch-action: manipulation;
   }
-  button.icon-btn:hover, button.icon-btn:active {
-    background: rgba(56, 189, 248, 0.25);
-    border-color: #38bdf8;
-  }
-
-  /* Overlays */
+  button:active { transform: scale(0.97); }
   .overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 20;
-    background: rgba(6, 7, 13, 0.78);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 16px;
-    text-align: center;
-    transition: opacity 0.3s ease;
-    overflow-y: auto;
-    touch-action: auto;
+    position: fixed; inset: 0; z-index: 30; background: rgba(6, 7, 13, 0.84);
+    display: flex; align-items: center; justify-content: center; padding: 16px;
   }
-  .overlay.hidden { opacity: 0; pointer-events: none; }
+  .hidden { display: none !important; }
   .card {
-    max-width: 520px;
-    width: 100%;
-    background: rgba(15, 23, 42, 0.88);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 24px;
-    padding: 24px 20px;
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65);
+    max-width: 440px; width: 100%; background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 22px;
+    padding: 24px 20px; text-align: center;
   }
-  h1 {
-    font-size: clamp(24px, 6vw, 32px);
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    background: linear-gradient(135deg, #38bdf8, #c084fc, #f472b6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 8px;
-  }
-  p.sub {
-    color: #94a3b8;
-    font-size: 14px;
-    line-height: 1.5;
-    margin-bottom: 20px;
-  }
-  .modes {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 10px;
-    margin-bottom: 18px;
-  }
+  h1 { font-size: 26px; color: #38bdf8; margin-bottom: 8px; }
+  p { color: #94a3b8; font-size: 14px; line-height: 1.45; margin-bottom: 18px; }
   .mode-btn {
-    background: rgba(30, 41, 59, 0.75);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 16px;
-    padding: 14px 16px;
-    text-align: left;
-    color: #f8fafc;
-    cursor: pointer;
-    touch-action: manipulation;
-    transition: all 0.2s;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
+    width: 100%; display: block; text-align: left; padding: 14px 16px;
+    border-radius: 14px; margin-bottom: 10px; background: #1e293b;
   }
-  .mode-btn:hover, .mode-btn:active {
-    background: rgba(56, 189, 248, 0.2);
-    border-color: #38bdf8;
-    transform: translateY(-1px);
-  }
-  .mode-title { font-size: 15px; font-weight: 700; margin-bottom: 3px; display: block; }
-  .mode-desc { font-size: 12px; color: #94a3b8; display: block; line-height: 1.35; }
-  .badge {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: rgba(56, 189, 248, 0.2);
-    color: #38bdf8;
-    white-space: nowrap;
-  }
-  .palettes { display: flex; justify-content: center; gap: 12px; margin-bottom: 16px; }
-  .pal-dot {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    cursor: pointer;
-    touch-action: manipulation;
-    border: 2px solid transparent;
-    transition: transform 0.15s;
-  }
-  .pal-dot.active { border-color: #fff; transform: scale(1.2); }
-  .controls-hint {
-    font-size: 12px;
-    color: #64748b;
-    line-height: 1.5;
-  }
-  .action-row { display: flex; gap: 10px; justify-content: center; margin-top: 18px; flex-wrap: wrap; }
-  .primary-btn {
-    background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
-    border: none;
-    color: white;
-    font-weight: 700;
-    font-size: 14px;
-    padding: 12px 22px;
-    border-radius: 999px;
-    cursor: pointer;
-    touch-action: manipulation;
-    box-shadow: 0 8px 24px rgba(14, 165, 233, 0.35);
-    transition: transform 0.15s;
-  }
-  .primary-btn:hover, .primary-btn:active { transform: scale(1.03); }
-  .secondary-btn {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    color: #f8fafc;
-    font-weight: 600;
-    font-size: 13px;
-    padding: 12px 18px;
-    border-radius: 999px;
-    cursor: pointer;
-    touch-action: manipulation;
-  }
-  .secondary-btn:hover, .secondary-btn:active { background: rgba(255, 255, 255, 0.15); }
-  .stat-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin: 18px 0;
-  }
-  .stat-box {
-    background: rgba(30, 41, 59, 0.65);
-    border-radius: 14px;
-    padding: 12px 8px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-  }
-  .stat-box .num { font-size: 20px; font-weight: 800; color: #38bdf8; }
-  .stat-box .lbl { font-size: 10px; color: #94a3b8; text-transform: uppercase; margin-top: 4px; }
+  .mode-btn strong { display: block; font-size: 15px; color: #f8fafc; margin-bottom: 2px; }
+  .mode-btn span { font-size: 12px; color: #94a3b8; }
+  .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+  .primary { background: #0284c7; border-color: #38bdf8; }
 </style>
 </head>
 <body>
 
-<canvas id="artCanvas"></canvas>
-<canvas id="fxCanvas"></canvas>
+<canvas id="art"></canvas>
+<canvas id="fx"></canvas>
 
-<!-- HUD -->
-<div id="hud" style="opacity:0;">
-  <div class="hud-group">
-    <div class="pill">SCORE <span class="val" id="hudScore">0</span></div>
-    <div class="pill combo">COMBO <span class="val" id="hudCombo">1x</span></div>
-    <div class="pill timer" id="hudTimerBox">TIME <span class="val" id="hudTimer">45</span></div>
+<div id="hud" class="hidden">
+  <div class="row">
+    <div class="pill">SCORE <b id="sVal">0</b></div>
+    <div class="pill">COMBO <b id="cVal">1x</b></div>
+    <div class="pill" id="tBox">TIME <b id="tVal">45</b></div>
   </div>
-  <div class="hud-group">
-    <button class="icon-btn" id="soundToggle">Sound: ON</button>
-    <button class="icon-btn" id="pauseBtn">Pause / Save</button>
+  <div class="row">
+    <button onclick="openEnd(true)">Pause / Save</button>
   </div>
 </div>
 
-<!-- Start Menu -->
-<div class="overlay" id="startOverlay">
+<div class="overlay" id="menuOverlay">
   <div class="card">
     <h1>Aetheris: Prism Weaver</h1>
-    <p class="sub">Drag your finger or mouse to weave glowing silk ribbons, draw closed loops around Lumen Orbs to capture them, and tap/click to pulse shockwaves.</p>
-
-    <div class="palettes" id="palettePicker"></div>
-
-    <div class="modes">
-      <button class="mode-btn" data-mode="arcade">
-        <div>
-          <span class="mode-title">Lumen Loop (Arcade)</span>
-          <span class="mode-desc">Circle orbs to capture them, stack combos, and extend your timer.</span>
-        </div>
-        <span class="badge">Timed</span>
-      </button>
-      <button class="mode-btn" data-mode="conduit">
-        <div>
-          <span class="mode-title">Starlight Conduit (Flow)</span>
-          <span class="mode-desc">Weave through moving Resonance Rings and shatter Void Spikes.</span>
-        </div>
-        <span class="badge">Survival</span>
-      </button>
-      <button class="mode-btn" data-mode="zen">
-        <div>
-          <span class="mode-title">Zen Canvas (Relax)</span>
-          <span class="mode-desc">No timers or hazards. Paint freely with melodic chimes and gentle orbs.</span>
-        </div>
-        <span class="badge">Chill</span>
-      </button>
-    </div>
-
-    <div class="controls-hint">
-      <strong>Drag Finger / Mouse:</strong> Draw loops around orbs &nbsp;•&nbsp;
-      <strong>Tap / Click:</strong> Pulse Shockwave
-    </div>
+    <p>Drag your finger or mouse to weave glowing ribbons, circle orbs to capture them, and tap to pulse shockwaves.</p>
+    <button class="mode-btn" onclick="startGame('arcade')">
+      <strong>Lumen Loop (Arcade)</strong>
+      <span>Circle orbs to capture them and extend the 45s timer.</span>
+    </button>
+    <button class="mode-btn" onclick="startGame('conduit')">
+      <strong>Starlight Conduit (Survival)</strong>
+      <span>Collect orbs and shatter red Void Spikes with tap shockwaves.</span>
+    </button>
+    <button class="mode-btn" onclick="startGame('zen')">
+      <strong>Zen Canvas (Relax)</strong>
+      <span>No timer or spikes. Paint freely with glowing ribbons.</span>
+    </button>
   </div>
 </div>
 
-<!-- Pause / Game Over Overlay -->
 <div class="overlay hidden" id="endOverlay">
   <div class="card">
     <h1 id="endTitle">Artwork Complete</h1>
-    <p class="sub" id="endSub">Your movements wove a unique generative tapestry.</p>
-    <div class="stat-grid">
-      <div class="stat-box"><div class="num" id="statScore">0</div><div class="lbl">Score</div></div>
-      <div class="stat-box"><div class="num" id="statOrbs">0</div><div class="lbl">Captured</div></div>
-      <div class="stat-box"><div class="num" id="statCombo">1x</div><div class="lbl">Max Combo</div></div>
-    </div>
-    <div class="action-row">
-      <button class="primary-btn" id="resumeBtn" style="display:none;">Resume</button>
-      <button class="primary-btn" id="restartBtn">Play Again</button>
-      <button class="secondary-btn" id="exportBtn">Save Artwork (PNG)</button>
-      <button class="secondary-btn" id="menuBtn">Main Menu</button>
+    <p id="endStats">Score: 0</p>
+    <div class="actions">
+      <button class="primary" id="resumeBtn" onclick="resumeGame()">Resume</button>
+      <button class="primary" onclick="startGame(mode)">Play Again</button>
+      <button onclick="saveArt()">Save PNG</button>
+      <button onclick="showMenu()">Menu</button>
     </div>
   </div>
 </div>
 
 <script>
-(() => {
-  const artCanvas = document.getElementById('artCanvas');
-  const fxCanvas = document.getElementById('fxCanvas');
-  const artCtx = artCanvas.getContext('2d');
-  const fxCtx = fxCanvas.getContext('2d');
+const art = document.getElementById('art'), fx = document.getElementById('fx');
+const aCtx = art.getContext('2d'), fCtx = fx.getContext('2d');
+const COLORS = ['#38bdf8', '#818cf8', '#c084fc', '#f472b6', '#2dd4bf'];
+const NOTES = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3, 659.3, 784.0];
 
-  let W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+let W = 0, H = 0, mode = 'arcade', state = 'menu';
+let score = 0, combo = 1, timer = 45, shields = 3, audioCtx = null;
+let ptr = { x: 0, y: 0, px: 0, py: 0, down: false };
+let trail = [], orbs = [], spikes = [], waves = [], sparks = [];
 
-  function resize() {
-    const prev = document.createElement('canvas');
-    prev.width = artCanvas.width;
-    prev.height = artCanvas.height;
-    if (prev.width > 0 && prev.height > 0) prev.getContext('2d').drawImage(artCanvas, 0, 0);
+function resize() {
+  W = window.innerWidth; H = window.innerHeight;
+  art.width = fx.width = W; art.height = fx.height = H;
+  aCtx.fillStyle = '#06070d'; aCtx.fillRect(0, 0, W, H);
+}
+window.addEventListener('resize', resize);
+resize();
 
-    W = window.innerWidth;
-    H = window.innerHeight;
-    artCanvas.width = W * DPR;
-    artCanvas.height = H * DPR;
-    fxCanvas.width = W * DPR;
-    fxCanvas.height = H * DPR;
-    artCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    fxCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
+function beep(freq, dur = 0.2) {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0.06, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + dur);
+  } catch (e) {}
+}
 
-    artCtx.fillStyle = '#06070d';
-    artCtx.fillRect(0, 0, W, H);
-    if (prev.width > 0 && prev.height > 0) {
-      artCtx.drawImage(prev, 0, 0, prev.width / DPR, prev.height / DPR);
-    }
-  }
-  window.addEventListener('resize', resize);
-  resize();
+function randCol() { return COLORS[Math.floor(Math.random() * COLORS.length)]; }
 
-  // Palettes
-  const PALETTES = [
-    { name: 'Aurora', colors: ['#38bdf8', '#818cf8', '#c084fc', '#f472b6', '#2dd4bf'] },
-    { name: 'Solar Flare', colors: ['#fbbf24', '#f97316', '#ef4444', '#ec4899', '#fde047'] },
-    { name: 'Cyber Jade', colors: ['#10b981', '#06b6d4', '#3b82f6', '#a3e635', '#22d3ee'] },
-    { name: 'Velvet Rose', colors: ['#fb7185', '#e879f9', '#a855f7', '#fda4af', '#f43f5e'] }
-  ];
-  let currentPalette = PALETTES[0];
-
-  const palettePicker = document.getElementById('palettePicker');
-  PALETTES.forEach((p, idx) => {
-    const dot = document.createElement('div');
-    dot.className = 'pal-dot' + (idx === 0 ? ' active' : '');
-    dot.style.background = `linear-gradient(135deg, ${p.colors[0]}, ${p.colors[2]})`;
-    dot.title = p.name;
-    dot.addEventListener('click', () => {
-      document.querySelectorAll('.pal-dot').forEach(d => d.classList.remove('active'));
-      dot.classList.add('active');
-      currentPalette = p;
-    });
-    palettePicker.appendChild(dot);
+function spawnOrb() {
+  orbs.push({
+    x: 40 + Math.random() * (W - 80), y: 70 + Math.random() * (H - 110),
+    vx: (Math.random() - 0.5) * 50, vy: (Math.random() - 0.5) * 50,
+    r: 15, col: randCol()
   });
+}
 
-  // Procedural Web Audio (Mobile & Desktop Unlocked)
-  let audioCtx = null;
-  let soundEnabled = true;
-  const PENTATONIC = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00];
+function spawnSpike() {
+  const edge = Math.floor(Math.random() * 4);
+  const x = edge === 1 ? W + 15 : edge === 3 ? -15 : Math.random() * W;
+  const y = edge === 0 ? -15 : edge === 2 ? H + 15 : Math.random() * H;
+  const ang = Math.atan2(H / 2 - y, W / 2 - x);
+  spikes.push({ x, y, vx: Math.cos(ang) * 95, vy: Math.sin(ang) * 95, r: 14 });
+}
 
-  function initAudio() {
-    if (!audioCtx) {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (AudioContextClass) audioCtx = new AudioContextClass();
-    }
-    if (audioCtx && audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
+function updateHUD() {
+  document.getElementById('sVal').textContent = score;
+  document.getElementById('cVal').textContent = combo + 'x';
+  const tBox = document.getElementById('tBox');
+  if (mode === 'arcade') { tBox.style.display = 'block'; document.getElementById('tVal').textContent = Math.ceil(timer) + 's'; }
+  else if (mode === 'conduit') { tBox.style.display = 'block'; document.getElementById('tVal').textContent = '♥'.repeat(Math.max(0, shields)); }
+  else { tBox.style.display = 'none'; }
+}
+
+function startGame(m) {
+  mode = m; state = 'playing'; score = 0; combo = 1; timer = 45; shields = 3;
+  trail = []; orbs = []; spikes = []; waves = []; sparks = [];
+  aCtx.globalCompositeOperation = 'source-over';
+  aCtx.fillStyle = '#06070d'; aCtx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 6; i++) spawnOrb();
+  document.getElementById('menuOverlay').classList.add('hidden');
+  document.getElementById('endOverlay').classList.add('hidden');
+  document.getElementById('hud').classList.remove('hidden');
+  updateHUD();
+  beep(523.3, 0.25);
+}
+
+function openEnd(paused) {
+  state = paused ? 'paused' : 'gameover';
+  document.getElementById('endTitle').textContent = paused ? 'Studio Paused' : 'Tapestry Complete';
+  document.getElementById('endStats').textContent = `Final Score: ${score}  •  Max Combo: ${combo}x`;
+  document.getElementById('resumeBtn').style.display = paused ? 'inline-block' : 'none';
+  document.getElementById('endOverlay').classList.remove('hidden');
+}
+
+function resumeGame() {
+  state = 'playing';
+  document.getElementById('endOverlay').classList.add('hidden');
+}
+
+function showMenu() {
+  state = 'menu';
+  document.getElementById('endOverlay').classList.add('hidden');
+  document.getElementById('hud').classList.add('hidden');
+  document.getElementById('menuOverlay').classList.remove('hidden');
+}
+
+function saveArt() {
+  const a = document.createElement('a');
+  a.download = 'prism-weaver.png';
+  a.href = art.toDataURL('image/png');
+  a.click();
+}
+
+function burst(x, y, col) {
+  aCtx.save();
+  aCtx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 18; i++) {
+    const ang = Math.random() * Math.PI * 2, d = Math.random() * 45;
+    aCtx.fillStyle = col; aCtx.globalAlpha = 0.35;
+    aCtx.beginPath(); aCtx.arc(x + Math.cos(ang) * d, y + Math.sin(ang) * d, 2 + Math.random() * 5, 0, Math.PI * 2); aCtx.fill();
+    sparks.push({ x, y, vx: Math.cos(ang) * 140, vy: Math.sin(ang) * 140, col, life: 0.6 });
   }
+  aCtx.restore();
+}
 
-  function playNote(freq, duration = 0.25, type = 'sine', gainVal = 0.08) {
-    if (!soundEnabled || !audioCtx) return;
-    const now = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, now);
-    gain.gain.setValueAtTime(0.001, now);
-    gain.gain.exponentialRampToValueAtTime(gainVal, now + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start(now);
-    osc.stop(now + duration + 0.02);
-  }
+function pulseWave(x, y) {
+  if (state !== 'playing') return;
+  const col = randCol();
+  waves.push({ x, y, r: 10, col });
+  beep(196, 0.25);
+}
 
-  function playChord(baseIdx) {
-    [0, 2, 4].forEach((offset, i) => {
-      const f = PENTATONIC[(baseIdx + offset) % PENTATONIC.length] * (i === 2 ? 1.5 : 1);
-      setTimeout(() => playNote(f, 0.45, 'triangle', 0.09), i * 35);
-    });
-  }
+function moveInput(x, y) {
+  if (state !== 'playing') return;
+  if (!ptr.down) { ptr.px = x; ptr.py = y; ptr.down = true; }
+  const dist = Math.hypot(x - ptr.px, y - ptr.py);
+  if (dist > 2) {
+    const col = COLORS[Math.floor((performance.now() * 0.004) % COLORS.length)];
+    trail.push({ x, y, col });
+    if (trail.length > 45) trail.shift();
 
-  function playShockwaveSound() {
-    if (!soundEnabled || !audioCtx) return;
-    const now = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(160, now);
-    osc.frequency.exponentialRampToValueAtTime(42, now + 0.35);
-    gain.gain.setValueAtTime(0.18, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start(now);
-    osc.stop(now + 0.4);
-  }
+    aCtx.save();
+    aCtx.globalCompositeOperation = 'lighter';
+    aCtx.strokeStyle = col; aCtx.globalAlpha = 0.35; aCtx.lineWidth = 4; aCtx.lineCap = 'round';
+    aCtx.beginPath(); aCtx.moveTo(ptr.px, ptr.py); aCtx.lineTo(x, y); aCtx.stroke();
+    aCtx.restore();
 
-  document.getElementById('soundToggle').addEventListener('click', (e) => {
-    initAudio();
-    soundEnabled = !soundEnabled;
-    e.target.textContent = `Sound: ${soundEnabled ? 'ON' : 'OFF'}`;
-  });
-
-  // Game State
-  let mode = 'arcade';
-  let state = 'menu';
-  let score = 0, combo = 1, maxCombo = 1, capturedCount = 0;
-  let timer = 45, shields = 3;
-  let lastTime = performance.now();
-  let noteCooldown = 0;
-
-  // Pointer & Ribbon
-  const pointer = { x: W / 2, y: H / 2, px: W / 2, py: H / 2, active: false };
-  const trail = [];
-  const MAX_TRAIL = 55;
-
-  // Entities
-  let orbs = [];
-  let spikes = [];
-  let rings = [];
-  let shockwaves = [];
-  let particles = [];
-  let floatingTexts = [];
-
-  function randColor() {
-    return currentPalette.colors[Math.floor(Math.random() * currentPalette.colors.length)];
-  }
-
-  function spawnOrb() {
-    const margin = Math.min(60, W * 0.12);
-    orbs.push({
-      x: margin + Math.random() * (W - margin * 2),
-      y: margin + 40 + Math.random() * (H - margin * 2 - 40),
-      vx: (Math.random() - 0.5) * 45,
-      vy: (Math.random() - 0.5) * 45,
-      r: 13 + Math.random() * 5,
-      color: randColor(),
-      pulse: Math.random() * Math.PI * 2
-    });
-  }
-
-  function spawnSpike() {
-    const edge = Math.floor(Math.random() * 4);
-    let x, y;
-    if (edge === 0) { x = Math.random() * W; y = -20; }
-    else if (edge === 1) { x = W + 20; y = Math.random() * H; }
-    else if (edge === 2) { x = Math.random() * W; y = H + 20; }
-    else { x = -20; y = Math.random() * H; }
-    const angle = Math.atan2(pointer.y - y, pointer.x - x);
-    const speed = 75 + Math.random() * 65 + Math.min(score * 0.02, 90);
-    spikes.push({
-      x, y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      r: 14,
-      rot: 0
-    });
-  }
-
-  function spawnRing() {
-    const margin = Math.min(80, W * 0.15);
-    rings.push({
-      x: margin + Math.random() * (W - margin * 2),
-      y: margin + 40 + Math.random() * (H - margin * 2 - 40),
-      r: 36,
-      color: randColor(),
-      life: 10
-    });
-  }
-
-  function addFloatingText(x, y, text, color) {
-    floatingTexts.push({ x, y, text, color, life: 1.0 });
-  }
-
-  function splatterArt(x, y, color, count = 24) {
-    artCtx.save();
-    artCtx.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < count; i++) {
-      const ang = Math.random() * Math.PI * 2;
-      const dist = Math.random() * 55;
-      const rad = 1.5 + Math.random() * 6;
-      artCtx.fillStyle = color;
-      artCtx.globalAlpha = 0.22 + Math.random() * 0.35;
-      artCtx.beginPath();
-      artCtx.arc(x + Math.cos(ang) * dist, y + Math.sin(ang) * dist, rad, 0, Math.PI * 2);
-      artCtx.fill();
-    }
-    artCtx.restore();
-  }
-
-  function emitParticles(x, y, color, count = 18) {
-    for (let i = 0; i < count; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const sp = 60 + Math.random() * 190;
-      particles.push({
-        x, y,
-        vx: Math.cos(a) * sp,
-        vy: Math.sin(a) * sp,
-        r: 2 + Math.random() * 3.5,
-        color,
-        life: 0.6 + Math.random() * 0.4
-      });
+    // Check closed loop around orbs
+    if (trail.length > 14) {
+      for (let i = 0; i < trail.length - 12; i++) {
+        if (Math.hypot(x - trail[i].x, y - trail[i].y) < 36) {
+          const cx = (x + trail[Math.floor((i + trail.length) / 2)].x) / 2;
+          const cy = (y + trail[Math.floor((i + trail.length) / 2)].y) / 2;
+          orbs.forEach((o, idx) => {
+            if (Math.hypot(o.x - cx, o.y - cy) < 120) {
+              burst(o.x, o.y, o.col);
+              score += 100 * combo; combo = Math.min(combo + 1, 20);
+              if (mode === 'arcade') timer = Math.min(timer + 2, 60);
+              beep(NOTES[combo % NOTES.length]);
+              orbs.splice(idx, 1); spawnOrb(); updateHUD();
+            }
+          });
+          trail = []; break;
+        }
+      }
     }
   }
+  ptr.px = x; ptr.py = y; ptr.x = x; ptr.y = y;
+}
 
-  function triggerShockwave(x, y) {
-    if (state !==
+// Mouse controls
+art.addEventListener('mousemove', e => moveInput(e.clientX, e.clientY));
+art.addEventListener('mousedown', e => { ptr.down = false; moveInput(e.clientX, e.clientY); pulseWave(e.clientX, e.clientY); });
+
+// Touch controls
+art.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  ptr.down = false; trail = [];
+  moveInput(t.clientX, t.clientY);
+  pulseWave(t.clientX, t.clientY);
+}, { passive: false });
+
+art.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  moveInput(t.clientX, t.clientY);
+}, { passive: false });
+
+art.addEventListener('touchend', e => { e.preventDefault(); ptr.down = false; }, { passive: false });
+
+let last = performance.now(), spTimer = 0;
+function loop(now) {
+  const dt = Math.min((now - last) / 1000, 0.05); last = now;
+  fCtx.clearRect(0, 0, W, H);
+
+  if (state === 'playing') {
+    if (mode === 'arcade') {
+      timer -= dt;
+      if (timer <= 0) { timer = 0; updateHUD(); openEnd(false); }
+      else updateHUD();
+    }
+    if (mode === 'conduit') {
+      spTimer -= dt;
+      if (spTimer <= 0) { spawnSpike(); spTimer = 1.6; }
+    }
+
+    orbs.forEach(o => {
+      o.x += o.vx * dt; o.y += o.vy * dt;
+      if (o.x < 30 || o.x > W - 30) o.vx *= -1;
+      if (o.y < 60 || o.y > H - 30) o.vy *= -1;
+      if (ptr.down && Math.hypot(ptr.x - o.x, ptr.y - o.y) < o.r + 18) {
+        burst(o.x, o.y, o.col);
+        score += 30 * combo;
+        beep(NOTES[score % NOTES.length], 0.15);
+        o.x = 40 + Math.random() * (W - 80); o.y = 70 + Math.random() * (H - 110); o.col = randCol();
+        updateHUD();
+      }
+      fCtx.fillStyle = o.col; fCtx.beginPath(); fCtx.arc(o.x, o.y, o.r, 0, Math.PI * 2); fCtx.fill();
+      fCtx.fillStyle = '#fff'; fCtx.beginPath(); fCtx.arc(o.x, o.y, 5, 0, Math.PI * 2); fCtx.fill();
+    });
+
+    for (let i = spikes.length - 1; i >= 0; i--) {
+      const s = spikes[i];
+      s.x += s.vx * dt; s.y += s.vy * dt;
+      if (waves.some(w => Math.hypot(s.x - w.x, s.y - w.y) < w.r + s.r)) {
+        burst(s.x, s.y, '#f472b6'); score += 75 * combo; spikes.splice(i, 1); updateHUD(); continue;
+      }
+      if (ptr.down && Math.hypot(s.x - ptr.x, s.y - ptr.y) < s.r + 12) {
+        shields--; combo = 1; burst(ptr.x, ptr.y, '#ef4444'); spikes.splice(i, 1); updateHUD();
+        if (shields <= 0) openEnd(false);
+        continue;
+      }
+      fCtx.fillStyle = '#ef4444'; fCtx.beginPath(); fCtx.arc(s.x, s.y, s.r, 0, Math.PI * 2); fCtx.fill();
+    }
+  }
+
+  for (let i = 1; i < trail.length; i++) {
+    fCtx.strokeStyle = trail[i].col; fCtx.lineWidth = (i / trail.length) * 6; fCtx.lineCap = 'round';
+    fCtx.beginPath(); fCtx.moveTo(trail[i - 1].x, trail[i - 1].y); fCtx.lineTo(trail[i].x, trail[i].y); fCtx.stroke();
+  }
+  for (let i = waves.length - 1; i >= 0; i--) {
+    const w = waves[i]; w.r += 380 * dt;
+    if (w.r > 150) { waves.splice(i, 1); continue; }
+    fCtx.strokeStyle = w.col; fCtx.lineWidth = 3; fCtx.beginPath(); fCtx.arc(w.x, w.y, w.r, 0, Math.PI * 2); fCtx.stroke();
+  }
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const p = sparks[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
+    if (p.life <= 0) { sparks.splice(i, 1); continue; }
+    fCtx.fillStyle = p.col; fCtx.beginPath(); fCtx.arc(p.x, p.y, 3, 0, Math.PI * 2); fCtx.fill();
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
